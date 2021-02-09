@@ -44,6 +44,33 @@ def store_byte(byte, address):
         Memory[address] = byte
 
 
+def load_uint8(address):
+    val = load_byte(address)
+    return val
+
+
+def store_uint8(sint, address):
+    val = sint % 256
+    store_byte(val, address)
+
+
+def load_sint8(address):
+    uint = load_uint8(address)
+    if uint > 127:
+        sint = uint - 256
+    else:
+        sint = uint
+    return sint
+
+
+def store_sint8(val, address):
+    if val < 0:
+        uint = val + 256
+    else:
+        uint = val
+    store_uint8(uint, address)
+
+
 def load_uint16(address):
     high = load_byte(address)
     low = load_byte(address+1)
@@ -75,14 +102,70 @@ def store_sint16(val, address):
     store_uint16(uint, address)
 
 
-val = 0
-prev = 0
-store_sint16(val, 8)
-while prev <= val:
-    prev = val
-    val = val + 1
-    print('prev = {}  val = {}'.format(prev, val))
-    store_sint16(val, 8)
-    val = load_sint16(8)
+all_variables = {}
 
-print('prev = {}  val = {}'.format(prev, val))
+def var(name, address, type):
+    all_variables[name] = (address, type)
+
+
+def get_var(name):
+    if name in all_variables:
+        (address, type) = all_variables[name]
+        if type == 'uint16':
+            return load_uint16(address)
+        if type == 'sint16':
+            return load_sint16(address)
+        if type == 'uint8':
+            return load_uint8(address)
+        if type == 'sint8':
+            return load_sint8(address)
+    return None
+
+def set_var(name, val):
+    if name in all_variables:
+        (address, type) = all_variables[name]
+        if type == 'uint16':
+            store_uint16(val, address)
+        if type == 'sint16':
+            store_sint16(val, address)
+        if type == 'uint8':
+            store_uint8(val, address)
+        if type == 'sint8':
+            store_sint8(val, address)
+    return None
+
+def copy_var(src, dest):
+    val = get_var(src)
+    set_var(dest, val)
+
+
+def add(src1, src2, dest):
+    v1 = get_var(src1)
+    if type(src2) is int:
+        v2 = src2
+    else:
+        v2 = get_var(src2)
+    v = v1 + v2
+    set_var(dest, v)
+
+
+def less_than(src1, src2):
+    v1 = get_var(src1)
+    v2 = get_var(src2)
+    return v1 < v2
+
+
+def less_than_or_equal(src1, src2):
+    v1 = get_var(src1)
+    v2 = get_var(src2)
+    return v1 <= v2
+
+
+var('value', 8, 'sint16')
+var('prev',  10, 'sint8')
+set_var('value', 0)
+set_var('prev', 0)
+while less_than_or_equal('prev', 'value'):
+    copy_var('value', 'prev')
+    add('value', 5, 'value')
+    print('prev = {}  val = {}'.format(get_var('prev'), get_var('value')))
